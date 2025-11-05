@@ -14,6 +14,7 @@ wettkampf_liste = [
 ]
 
 
+# TODO: Fehlerbehandlung
 def checkingSocket():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
@@ -34,7 +35,17 @@ def checkingSocket():
 
 def manageInput(data):
     decodeString = data.decode()
+    # noinspection PyRedundantParentheses
+    if (decodeString == "Starting..."):
+        print("Client Starting")
+        return
     splitString = decodeString.split("|")
+    # noinspection PyRedundantParentheses
+    if (len(splitString) == 2):
+        print(splitString[0] + " -> " + splitString[1])
+    else:
+        print("wrong message from client")
+        return
 
 
 if __name__ == "__main__":

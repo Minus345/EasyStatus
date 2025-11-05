@@ -8,16 +8,25 @@ clientSocket = socket.socket()
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 65432  # The port used by the server
 
+wettkampf_dictionaries = {
+    "WK 1": "0",
+    "WK 2": "0",
+    "WK 3": "0",
+    "WK 4": "0",
+}
+
 root = Tk()
 
-def status_geaendert(status_text, var):
-    print(f"{status_text} wurde geändert zu: {'inoffiziell' if var.get() else 'offiziell'}")
 
+def status_geaendert(wkNumber, var):
+    print(f"{wkNumber} wurde geändert zu: {'inoffiziell' if var.get() else 'offiziell'}")
+
+    if var.get() == 1:
+        wettkampf_dictionaries[wkNumber] = "0"
+    else:
+        wettkampf_dictionaries[wkNumber] = "1"  # 1 ist offiziell
     try:
-        if var.get() == 1:
-            clientSocket.sendall(status_text.encode() + b" | 0")  # 0 ist inoffiziell
-        else:
-            clientSocket.sendall(status_text.encode() + b" | 1")  # 1 ist offiziell
+        clientSocket.sendall(wkNumber.encode() + b"|" + wettkampf_dictionaries[wkNumber].encode())
     except socket.error as e:
         print(f"Error during data exchange: {e}")
         # TODO: Save to file and exit
@@ -31,6 +40,7 @@ def openSocket():
             clientSocket.connect((HOST, PORT))
             try:
                 clientSocket.sendall(b"Starting...")
+                # TODO: Send init dic zustand
             except socket.error as e:
                 print(f"Error during data exchange: {e}")
         except socket.timeout:
@@ -52,6 +62,7 @@ def openSocket():
 
 def closeSocket():
     clientSocket.close()
+
 
 def onClose():
     if messagebox.askokcancel("Beenden", "Möchtest du das Fenster wirklich schließen?"):
@@ -86,19 +97,8 @@ def createWindow():
     canvas.pack(side=LEFT, fill=BOTH, expand=True)
     scrollbar.pack(side=RIGHT, fill=Y)
 
-    # Beispielhafte Liste von Einträgen
-    wettkampf_liste = [
-        "WK 1",
-        "WK 2",
-        "WK 3",
-        "WK 4",
-        "WK 5",
-        "WK 6",
-        "WK 7"
-    ]
-
     # Jeden Eintrag mit Label und zwei Radiobuttons anzeigen
-    for status in wettkampf_liste:
+    for status in wettkampf_dictionaries:
         eintrag_frame = Frame(scrollable_frame, pady=5)
         eintrag_frame.pack(fill=X, padx=10)
 
