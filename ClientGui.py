@@ -1,34 +1,72 @@
 from tkinter import *
 import socket
+import sys
+from tkinter import messagebox
 
-clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+clientSocket = socket.socket()
 
 HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 65432  # The port used by the server
 
+root = Tk()
 
 def status_geaendert(status_text, var):
     print(f"{status_text} wurde geändert zu: {'inoffiziell' if var.get() else 'offiziell'}")
 
-    if var.get() == 1:
-        clientSocket.sendall(status_text.encode() + b" | 0")  # 0 ist inoffiziell
-    else:
-        clientSocket.sendall(status_text.encode() + b" | 1")  # 1 ist offiziell
+    try:
+        if var.get() == 1:
+            clientSocket.sendall(status_text.encode() + b" | 0")  # 0 ist inoffiziell
+        else:
+            clientSocket.sendall(status_text.encode() + b" | 1")  # 1 ist offiziell
+    except socket.error as e:
+        print(f"Error during data exchange: {e}")
+        # TODO: Save to file and exit
 
 
 def openSocket():
-    clientSocket.connect((HOST, PORT))
-    clientSocket.sendall(b"Starting...")
+    global clientSocket
+    try:
+        clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            clientSocket.connect((HOST, PORT))
+            try:
+                clientSocket.sendall(b"Starting...")
+            except socket.error as e:
+                print(f"Error during data exchange: {e}")
+        except socket.timeout:
+            print(f"Connection attempt timed out")
+            sys.exit(1)
+        except ConnectionRefusedError:
+            print(f"Connection refused. Make sure the server is running.")
+            sys.exit(1)
+        except socket.error as e:
+            print(f"Connection error: {e}")
+            sys.exit(1)
+    except socket.error as e:
+        print(f"Socket creation error: {e}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print(f"\nClient shutting down...")
+        sys.exit(1)
 
 
 def closeSocket():
     clientSocket.close()
 
+def onClose():
+    if messagebox.askokcancel("Beenden", "Möchtest du das Fenster wirklich schließen?"):
+        # TODO: Save to file
+        root.destroy()
+        closeSocket()
+        sys.exit(0)
+
 
 def createWindow():
-    root = Tk()
     root.title("EasyStatus")
     root.geometry("400x370")
+
+    # Close Handler
+    root.protocol("WM_DELETE_WINDOW", onClose)
 
     # Canvas + Scrollbar Setup
     canvas = Canvas(root)
