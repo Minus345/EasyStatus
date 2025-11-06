@@ -1,4 +1,5 @@
 import socket
+import sys
 
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
@@ -9,16 +10,18 @@ wettkampf_dictionaries = {
 }
 
 
-# TODO: Fehlerbehandlung
 def checkingSocket():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind((HOST, PORT))
-        s.listen()
+    global serverSocket
+    try:
+        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        serverSocket.bind((HOST, PORT))
+        serverSocket.listen()
+
         while True:
-            conn, addr = s.accept()
-            with conn:
-                print(f"Connected by {addr}")
+            conn, addr = serverSocket.accept()
+            print(f"Connected by {addr}")
+            try:
                 while True:
                     data = conn.recv(1024)
                     # print(data)
@@ -26,7 +29,22 @@ def checkingSocket():
                     if not data:
                         print(f"client {addr} disconnected")
                         break
-                    ##conn.sendall(data)
+            except socket.error as e:
+                print(f"Socket error occurred")
+                sys.exit(1)
+            finally:
+                conn.close()
+                print(f"Connection closed")
+    except socket.error as e:
+        print(f"Socket error occurred: {e}")
+        exit(1)
+    except KeyboardInterrupt:
+        print(f"Shutting down...")
+    finally:
+        if 'serverSocket' in globals():
+            serverSocket.close()
+            print(f"Server socket closed")
+        sys.exit(0)
 
 
 def manageInput(data):
