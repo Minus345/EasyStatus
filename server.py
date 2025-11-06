@@ -4,10 +4,7 @@ import sys
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
 
-# TODO: geht bestimmt auch schöner
-wettkampf_dictionaries = {
-    "WK 0": "test"
-}
+wettkampf_dictionaries = dict()
 
 
 def checkingSocket():
@@ -37,7 +34,6 @@ def checkingSocket():
                 print(f"Connection closed")
     except socket.error as e:
         print(f"Socket error occurred: {e}")
-        exit(1)
     except KeyboardInterrupt:
         print(f"Shutting down...")
     finally:
@@ -49,21 +45,27 @@ def checkingSocket():
 
 def manageInput(data):
     decodeString = data.decode()
-    # noinspection PyRedundantParentheses
-    if (decodeString == "Starting..."):
-        print("Client Starting")
-        return
-    splitString = decodeString.split("|")
-    # noinspection PyRedundantParentheses
-    if (len(splitString) == 2):
-        # print(splitString[0] + " -> " + splitString[1])
-        if splitString[0] not in wettkampf_dictionaries:
-            wettkampf_dictionaries[splitString[0]] = splitString[1]
+
+    splitNewLine = decodeString.split("\n")
+    # print(splitNewLine)
+    for x in splitNewLine:
+        if x == "":  # .split bei NewLine splittet auch das letzte zeichen weg
+            continue
+        if x == "HI":
+            print("HI")
+            wettkampf_dictionaries.clear()
+            continue
+        splitString = x.split("|")
+        # noinspection PyRedundantParentheses
+        if (len(splitString) == 2):
+            # print(splitString[0] + " -> " + splitString[1])
+            if splitString[0] not in wettkampf_dictionaries:
+                wettkampf_dictionaries[splitString[0]] = splitString[1]
+            else:
+                wettkampf_dictionaries.update({splitString[0]: splitString[1]})
         else:
-            wettkampf_dictionaries.update({splitString[0]: splitString[1]})
-    else:
-        print("wrong message from client")
-        return
+            print("wrong message from client: <" + decodeString + ">")
+            continue
     printAll()
 
 
