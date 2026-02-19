@@ -16,6 +16,17 @@ wettkampf_dictionaries = {
     "WK 2": "inoffiziell",
     "WK 3": "inoffiziell",
     "WK 4": "inoffiziell",
+    "WK 5": "inoffiziell",
+    "WK 6": "inoffiziell",
+    "WK 7": "inoffiziell",
+    "WK 8": "inoffiziell",
+    "WK 9": "inoffiziell",
+    "WK 10": "inoffiziell",
+    "WK 11": "inoffiziell",
+    "WK 12": "inoffiziell",
+    "WK 13": "inoffiziell",
+    "WK 14": "inoffiziell",
+    "WK 15": "inoffiziell",
 }
 
 root = Tk()
