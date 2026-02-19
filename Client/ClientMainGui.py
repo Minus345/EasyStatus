@@ -1,35 +1,15 @@
-import os.path
 from tkinter import *
 import socket
 import sys
 from tkinter import messagebox
-import pickle
+import Startup
 
-HOST = "127.0.0.1"  # The server's hostname or IP address
 PORT = 65432  # The port used by the server
 
-saveFileExists = False
-path = "wk.pkl"
+wettkampf_dictionaries = dict()
 
-wettkampf_dictionaries = {
-    "WK 1": "inoffiziell",
-    "WK 2": "inoffiziell",
-    "WK 3": "inoffiziell",
-    "WK 4": "inoffiziell",
-    "WK 5": "inoffiziell",
-    "WK 6": "inoffiziell",
-    "WK 7": "inoffiziell",
-    "WK 8": "inoffiziell",
-    "WK 9": "inoffiziell",
-    "WK 10": "inoffiziell",
-    "WK 11": "inoffiziell",
-    "WK 12": "inoffiziell",
-    "WK 13": "inoffiziell",
-    "WK 14": "inoffiziell",
-    "WK 15": "inoffiziell",
-}
-
-root = Tk()
+global root
+global clientSocket
 
 
 def status_geaendert(wkNumber, var):
@@ -56,58 +36,35 @@ def sendAllKnownData():
         saveAndExit()
 
 
-def openSocket():
+def openSocket(host, port):
     global clientSocket
     try:
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
-            clientSocket.connect((HOST, PORT))
+            clientSocket.connect((host, port))
             try:
+                ## send all known data
                 clientSocket.sendall(b"HI\n")
-                if saveFileExists:
-                    print(f"Send all known Data")
-                    sendAllKnownData()
+                return None
             except socket.error as e:
                 print(f"Error during data exchange: {e}")
                 saveAndExit()
         except socket.timeout:
-            print(f"Connection attempt timed out")
-            sys.exit(1)
+            return "Connection attempt timed out"
         except ConnectionRefusedError:
-            print(f"Connection refused. Make sure the server is running.")
-            sys.exit(1)
+            return "Connection refused. Make sure the server is running."
         except socket.error as e:
-            print(f"Connection error: {e}")
-            sys.exit(1)
+            return f"Connection error: {e}"
     except socket.error as e:
-        print(f"Socket creation error: {e}")
-        sys.exit(1)
+        return f"Socket creation error: {e}"
     except KeyboardInterrupt:
-        print(f"\nClient shutting down...")
-        sys.exit(1)
+        return f"\nClient shutting down..."
 
 
 def saveAndExit():
-    closeSocket()
-    with open(path, "wb") as f:
-        pickle.dump(wettkampf_dictionaries, f)
+    clientSocket.close()
     root.destroy()
     sys.exit(1)
-
-
-def loadData():
-    global wettkampf_dictionaries
-    if os.path.exists(path) and os.path.isfile(path):
-        with open(path, "rb") as f:
-            wettkampf_dictionaries = pickle.load(f)
-            global saveFileExists
-            saveFileExists = True
-    else:
-        print(f"Could´t find save file -> not loading anything")
-
-
-def closeSocket():
-    clientSocket.close()
 
 
 def onClose():
@@ -115,7 +72,9 @@ def onClose():
         saveAndExit()
 
 
-def createWindow():
+def createWindow(filePath):
+    global root
+    root = Tk()
     root.title("EasyStatus")
     root.geometry("400x370")
 
@@ -148,13 +107,7 @@ def createWindow():
         label = Label(eintrag_frame, text=wk, width=10, anchor="w")
         label.pack(side=LEFT)
 
-        if saveFileExists:
-            if wettkampf_dictionaries[wk] == "inoffiziell":
-                state = IntVar(value=1)
-            else:
-                state = IntVar(value=0)
-        else:
-            state = IntVar(value=-1)  # Startwert -1 bedeutet "nicht ausgewählt"
+        state = IntVar(value=-1)  # Startwert -1 bedeutet "nicht ausgewählt"
 
         cb1 = Radiobutton(
             eintrag_frame, text="inoffiziell", fg="red", variable=state, value=1,
@@ -171,7 +124,28 @@ def createWindow():
     root.mainloop()
 
 
+def readFile(filePath):
+    if filePath is None:
+        messagebox.showerror("Error", "File path cannot be None")
+        sys.exit(1)
+
+    try:
+        file = open(filePath, "r")
+    except FileNotFoundError:
+        messagebox.showerror("Error", "File not found")
+        sys.exit(1)
+    else:
+        with file:
+            for line in file:
+                global wettkampf_dictionaries
+                wettkampf_dictionaries[line.split(":")[0]] = line.split(":")[1]
+
+
 if __name__ == "__main__":
-    loadData()
-    openSocket()
-    createWindow()
+    port, ipaddress, filePath = Startup.startUp(PORT)
+    error = openSocket(ipaddress, port)
+    readFile(filePath)
+    if error is not None:
+        messagebox.showinfo(title="Connection Error", message=error)
+        sys.exit(1)
+    createWindow(filePath)
