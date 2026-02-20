@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 
 root = tk.Tk()
 root.title("Easy Status - Startup")
@@ -8,6 +8,7 @@ ip_var = tk.StringVar()
 port_var = tk.StringVar()
 file_var = tk.StringVar()
 
+#TODO: on close exit
 
 def open_file():
     filepath = filedialog.askopenfilename()
@@ -21,7 +22,7 @@ def __start_action():
 
 def startUp(defaultPort: int):
     port_var.set(str(defaultPort))
-    tk.Label(root, text="IP Address:").grid(row=0, column=0, sticky="e")
+    tk.Label(root, text="Server IP Address:").grid(row=0, column=0, sticky="e")
     tk.Entry(root, textvariable=ip_var, width=25).grid(row=0, column=1)
 
     tk.Label(root, text="Port:").grid(row=1, column=0, sticky="e")

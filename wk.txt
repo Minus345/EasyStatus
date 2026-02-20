@@ -1,1 +1,3 @@
-WK 1:inoffiziell
+WK 1:offiziell
+WK 2:inoffiziell
+WK 3:inoffiziell

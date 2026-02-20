@@ -70,6 +70,7 @@ def manageInput(data):
 
 
 def printAll():
+    ##TODO: sort list
     print("----------")
     for x in wettkampf_dictionaries:
         print(x + " " + wettkampf_dictionaries[x])

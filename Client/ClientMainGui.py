@@ -25,6 +25,8 @@ def status_geaendert(wkNumber, var):
         print(f"Error during data exchange: {e}")
         saveAndExit()
 
+    saveFile()
+
 
 def sendAllKnownData():
     try:
@@ -72,7 +74,7 @@ def onClose():
         saveAndExit()
 
 
-def createWindow(filePath):
+def createWindow():
     global root
     root = Tk()
     root.title("EasyStatus")
@@ -107,7 +109,12 @@ def createWindow(filePath):
         label = Label(eintrag_frame, text=wk, width=10, anchor="w")
         label.pack(side=LEFT)
 
-        state = IntVar(value=-1)  # Startwert -1 bedeutet "nicht ausgewählt"
+        if wk == "inoffiziell":
+            state = IntVar(value=1)
+        elif wk == "offiziell":
+            state = IntVar(value=0)
+        else:
+            state = IntVar(value=-1)  # Startwert -1 bedeutet "nicht ausgewählt"
 
         cb1 = Radiobutton(
             eintrag_frame, text="inoffiziell", fg="red", variable=state, value=1,
@@ -124,28 +131,40 @@ def createWindow(filePath):
     root.mainloop()
 
 
-def readFile(filePath):
-    if filePath is None:
-        messagebox.showerror("Error", "File path cannot be None")
-        sys.exit(1)
-
+def readFile():
+    #TODO: check file suffix
     try:
         file = open(filePath, "r")
     except FileNotFoundError:
         messagebox.showerror("Error", "File not found")
         sys.exit(1)
-    else:
-        with file:
-            for line in file:
-                global wettkampf_dictionaries
+    with (file):
+        counter = 0
+        global wettkampf_dictionaries
+        for line in file:
+            counter += 1
+            try:
                 wettkampf_dictionaries[line.split(":")[0]] = line.split(":")[1]
+            except IndexError:
+                messagebox.showerror("Error", "File Reading Error in line:[ " + str(counter) + " ] " + line)
+
+
+def saveFile():
+    try:
+        file = open(filePath, "w")
+    except FileNotFoundError:
+        messagebox.showerror("Error", "File not found")
+        sys.exit(1)
+    with file:
+        for wk in wettkampf_dictionaries:
+            print(wk + ":" + wettkampf_dictionaries[wk], file=file, flush=True)
 
 
 if __name__ == "__main__":
     port, ipaddress, filePath = Startup.startUp(PORT)
     error = openSocket(ipaddress, port)
-    readFile(filePath)
+    readFile()
     if error is not None:
-        messagebox.showinfo(title="Connection Error", message=error)
+        messagebox.showinfo(title="Error", message=error)
         sys.exit(1)
-    createWindow(filePath)
+    createWindow()
