@@ -4,13 +4,12 @@ import sys
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
 
-wettkampf_dictionaries = dict()
+wettkampf_dictionaries = dict[str, str]()
 
 
 def checkingSocket():
-    global serverSocket
-    try:
-        serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #TODO multithreaded mit mehreren clients
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
         serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         serverSocket.bind((HOST, PORT))
         serverSocket.listen()
@@ -18,7 +17,7 @@ def checkingSocket():
         while True:
             conn, addr = serverSocket.accept()
             print(f"Connected by {addr}")
-            try:
+            with conn:
                 while True:
                     data = conn.recv(1024)
                     # print(data)
@@ -26,22 +25,6 @@ def checkingSocket():
                     if not data:
                         print(f"client {addr} disconnected")
                         break
-            except socket.error as e:
-                print(f"Socket error occurred")
-                sys.exit(1)
-            finally:
-                conn.close()
-                print(f"Connection closed")
-    except socket.error as e:
-        print(f"Socket error occurred: {e}")
-    except KeyboardInterrupt:
-        print(f"Shutting down...")
-    finally:
-        if 'serverSocket' in globals():
-            serverSocket.close()
-            print(f"Server socket closed")
-        sys.exit(0)
-
 
 def manageInput(data):
     decodeString = data.decode()
@@ -70,10 +53,10 @@ def manageInput(data):
 
 
 def printAll():
-    ##TODO: sort list
+    wettkampf_dictionaries_sorted = {k: v for k, v in sorted(wettkampf_dictionaries.items(), key=lambda item: item[0])}
     print("----------")
-    for x in wettkampf_dictionaries:
-        print(x + " " + wettkampf_dictionaries[x])
+    for x in wettkampf_dictionaries_sorted:
+        print(x + " " + wettkampf_dictionaries_sorted[x])
     print("----------")
 
 
