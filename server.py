@@ -1,14 +1,21 @@
+import asyncio
 import socket
-import sys
+import threading
+import queue
+
+from desktop_notifier import DesktopNotifier, DesktopNotifierSync
 
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
 
 wettkampf_dictionaries = dict[str, str]()
 
+global notificationHandler
+notificationQueue = queue.Queue()
+POISON_PILL = -1
+
 
 def checkingSocket():
-    #TODO multithreaded mit mehreren clients
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
         serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         serverSocket.bind((HOST, PORT))
@@ -25,6 +32,7 @@ def checkingSocket():
                     if not data:
                         print(f"client {addr} disconnected")
                         break
+
 
 def manageInput(data):
     decodeString = data.decode()
@@ -46,6 +54,7 @@ def manageInput(data):
                 wettkampf_dictionaries[splitString[0]] = splitString[1]
             else:
                 wettkampf_dictionaries.update({splitString[0]: splitString[1]})
+            notificationQueue.put(x)
         else:
             print("wrong message from client: <" + decodeString + ">")
             continue
@@ -60,7 +69,28 @@ def printAll():
     print("----------")
 
 
+def notificationWorkerRun():
+    notifier = DesktopNotifierSync(app_name="EasyStatus")
+    while True:
+        work = notificationQueue.get()
+        if work == POISON_PILL:
+            break
+        notifier.send(title="Neuen WK:", message=str(work))
+
+
+def createNotificationThread():
+    global notificationHandler
+    notificationHandler = threading.Thread(target=notificationWorkerRun)
+    notificationHandler.start()
+
+
 if __name__ == "__main__":
     print("starting Server...")
-    print(HOST)
-    checkingSocket()
+    print(HOST + ":" + str(PORT))
+    createNotificationThread()
+    try:
+        checkingSocket()
+    except KeyboardInterrupt:
+        print("shutting down ...")
+        notificationQueue.put(POISON_PILL)
+        notificationHandler.join()
