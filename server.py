@@ -1,18 +1,36 @@
-import asyncio
 import socket
 import threading
 import queue
+import time
 
 from desktop_notifier import DesktopNotifier, DesktopNotifierSync
 
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
 
-wettkampf_dictionaries = dict[str, str]()
+
+class Wettkampf:
+    name: str
+    official: bool
+    lastEditedTime: time.struct_time
+    poison = False
+
+    def __init__(self, name, official, poison):
+        self.name = name
+        self.official = official
+        self.poison = poison
+        self.lastEditedTime = time.localtime(time.time())
+
+    def computeTime(self):
+        return str(self.lastEditedTime.tm_hour) + ":" + str(self.lastEditedTime.tm_min) + ":" + str(self.lastEditedTime.tm_sec)
+
+    def updateTime(self):
+        self.lastEditedTime = time.localtime(time.time())
+
+wettkampf_dictionaries = dict[str, Wettkampf]()
 
 global notificationHandler
-notificationQueue = queue.Queue()
-POISON_PILL = -1
+notificationQueue = queue.Queue[Wettkampf]()
 
 
 def checkingSocket():
@@ -36,9 +54,7 @@ def checkingSocket():
 
 def manageInput(data):
     decodeString = data.decode()
-
     splitNewLine = decodeString.split("\n")
-    # print(splitNewLine)
     for x in splitNewLine:
         if x == "":  # .split bei NewLine splittet auch das letzte zeichen weg
             continue
@@ -47,14 +63,22 @@ def manageInput(data):
             wettkampf_dictionaries.clear()
             continue
         splitString = x.split("|")
-        # noinspection PyRedundantParentheses
-        if (len(splitString) == 2):
-            # print(splitString[0] + " -> " + splitString[1])
+        if len(splitString) == 2:
             if splitString[0] not in wettkampf_dictionaries:
-                wettkampf_dictionaries[splitString[0]] = splitString[1]
+                if splitString[1] == "offiziell":
+                    newWettkampf = Wettkampf(splitString[0], True, False)
+                else:
+                    newWettkampf = Wettkampf(splitString[0], False, False)
+                wettkampf_dictionaries[splitString[0]] = newWettkampf # in dict hinzufügen
             else:
-                wettkampf_dictionaries.update({splitString[0]: splitString[1]})
-            notificationQueue.put(x)
+                if splitString[1] == "offiziell":
+                    wettkampf_dictionaries[splitString[0]].official = True
+                else:
+                    wettkampf_dictionaries[splitString[0]].official = False
+
+            wettkampf_dictionaries[splitString[0]].updateTime()
+            notificationQueue.put(wettkampf_dictionaries[splitString[0]])
+
         else:
             print("wrong message from client: <" + decodeString + ">")
             continue
@@ -65,7 +89,12 @@ def printAll():
     wettkampf_dictionaries_sorted = {k: v for k, v in sorted(wettkampf_dictionaries.items(), key=lambda item: item[0])}
     print("----------")
     for x in wettkampf_dictionaries_sorted:
-        print(x + " " + wettkampf_dictionaries_sorted[x])
+        wettkampf = wettkampf_dictionaries_sorted[x]
+        if wettkampf.official:
+            message = wettkampf.name + " offiziell ✔ " + wettkampf.computeTime()
+        else:
+            message = wettkampf.name + " inoffiziell 𐄂 " + wettkampf.computeTime()
+        print(message)
     print("----------")
 
 
@@ -73,9 +102,15 @@ def notificationWorkerRun():
     notifier = DesktopNotifierSync(app_name="EasyStatus")
     while True:
         work = notificationQueue.get()
-        if work == POISON_PILL:
+        if work.poison:
             break
-        notifier.send(title="Neuen WK:", message=str(work))
+
+        if work.official:
+            message = work.name + " offiziell ✔"
+        else:
+            message = work.name + " inoffiziell 𐄂"
+
+        notifier.send(title="Neuen WK:", message=message)
 
 
 def createNotificationThread():
@@ -92,5 +127,5 @@ if __name__ == "__main__":
         checkingSocket()
     except KeyboardInterrupt:
         print("shutting down ...")
-        notificationQueue.put(POISON_PILL)
+        notificationQueue.put(Wettkampf(None, False, True))
         notificationHandler.join()
