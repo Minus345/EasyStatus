@@ -22,35 +22,38 @@ def status_geaendert(wkNumber, var):
     try:
         clientSocket.sendall(wkNumber.encode() + b"|" + wettkampf_dictionaries[wkNumber].encode() + b"\n")
     except socket.error as e:
-        print(f"Error during data exchange: {e}")
-        saveAndExit()
+        saveFile()
+
+        # Try to Reconnect to Server
+        errorString = "Error during data exchange: " + str(e) + " Trying reconnect:"
+        while (True):
+            doReconnect = messagebox.askyesno("Error", errorString )
+            if doReconnect:
+                errorSock = openSocket(ipaddress, port)
+                errorString = "Error during connection to Server: " + ipaddress + " : " + str(port) + " -> " + errorSock + " Trying reconnect: "
+                if errorSock is None:
+                    break
+            else:
+                root.destroy()
+                sys.exit(1)
 
     saveFile()
 
 
-def sendAllKnownData():
-    try:
-        for wk in wettkampf_dictionaries:
-            clientSocket.sendall(wk.encode() + b"|" + wettkampf_dictionaries[wk].encode() + b"\n")
-            # print("send" + wk)
-    except socket.error as e:
-        print(f"Error during data exchange: {e}")
-        saveAndExit()
-
-
-def openSocket(host, port):
+def openSocket(host: str, port: int):
     global clientSocket
     try:
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             clientSocket.connect((host, port))
             try:
-                ## send all known data
                 clientSocket.sendall(b"HI\n")
+                ## send all known data
+                for wk in wettkampf_dictionaries:
+                    clientSocket.sendall(wk.encode() + b"|" + wettkampf_dictionaries[wk].encode() + b"\n")
                 return None
             except socket.error as e:
-                print(f"Error during data exchange: {e}")
-                saveAndExit()
+                return f"Error during data exchange: {e}"
         except socket.timeout:
             return "Connection attempt timed out"
         except ConnectionRefusedError:
@@ -132,7 +135,7 @@ def createWindow():
 
 
 def readFile():
-    #TODO: check file suffix
+    # TODO: check file suffix
     try:
         file = open(filePath, "r")
     except FileNotFoundError:
