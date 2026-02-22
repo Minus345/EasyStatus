@@ -30,9 +30,9 @@ def status_geaendert(wkNumber, var):
             doReconnect = messagebox.askyesno("Error", errorString )
             if doReconnect:
                 errorSock = openSocket(ipaddress, port)
-                errorString = "Error during connection to Server: " + ipaddress + " : " + str(port) + " -> " + errorSock + " Trying reconnect: "
                 if errorSock is None:
                     break
+                errorString = "Error during connection to Server: " + ipaddress + " : " + str(port) + " -> " + errorSock + " Trying reconnect: "
             else:
                 root.destroy()
                 sys.exit(1)
