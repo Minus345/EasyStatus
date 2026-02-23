@@ -22,10 +22,12 @@ class Wettkampf:
         self.lastEditedTime = time.localtime(time.time())
 
     def computeTime(self):
-        return str(self.lastEditedTime.tm_hour) + ":" + str(self.lastEditedTime.tm_min) + ":" + str(self.lastEditedTime.tm_sec)
+        return str(self.lastEditedTime.tm_hour) + ":" + str(
+            self.lastEditedTime.tm_min)  # + ":" + str(self.lastEditedTime.tm_sec)
 
     def updateTime(self):
         self.lastEditedTime = time.localtime(time.time())
+
 
 wettkampf_dictionaries = dict[str, Wettkampf]()
 
@@ -69,7 +71,7 @@ def manageInput(data):
                     newWettkampf = Wettkampf(splitString[0], True, False)
                 else:
                     newWettkampf = Wettkampf(splitString[0], False, False)
-                wettkampf_dictionaries[splitString[0]] = newWettkampf # in dict hinzufügen
+                wettkampf_dictionaries[splitString[0]] = newWettkampf  # in dict hinzufügen
             else:
                 if splitString[1] == "offiziell":
                     wettkampf_dictionaries[splitString[0]].official = True
@@ -87,15 +89,24 @@ def manageInput(data):
 
 def printAll():
     wettkampf_dictionaries_sorted = {k: v for k, v in sorted(wettkampf_dictionaries.items(), key=lambda item: item[0])}
-    print("----------")
+    print("---------------[Status]---------------")
+    longestName = 0
+    for x in wettkampf_dictionaries_sorted:
+        if len(wettkampf_dictionaries_sorted[x].name) > longestName:
+            longestName = len(wettkampf_dictionaries_sorted[x].name)
+
     for x in wettkampf_dictionaries_sorted:
         wettkampf = wettkampf_dictionaries_sorted[x]
+
+        bufferSpacesCount = longestName - len(wettkampf_dictionaries_sorted[x].name)
+        bufferSpaces = " " * bufferSpacesCount
+
         if wettkampf.official:
-            message = wettkampf.name + " offiziell ✔ " + wettkampf.computeTime()
+            message = "| " + wettkampf.name + bufferSpaces + " | offiziell   ✔ | " + wettkampf.computeTime() + " | "
         else:
-            message = wettkampf.name + " inoffiziell 𐄂 " + wettkampf.computeTime()
+            message = "| " + wettkampf.name + bufferSpaces + " | inoffiziell 𐄂 | " + wettkampf.computeTime() + " | "
         print(message)
-    print("----------")
+    print("--------------------------------------")
 
 
 def notificationWorkerRun():

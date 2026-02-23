@@ -1,4 +1,4 @@
-WK 1:offiziell
-WK 2:offiziell
-WK 3:offiziell
+WK 1:inoffiziell
+WK 2:inoffiziell
+WK 3:inoffiziell
 Finale:offiziell
