@@ -1,4 +1,4 @@
-1:False
-2:True
-3:True
-Finale:True
+1:False:True:False:False
+2:False:False:True:False
+3:False:False:False:True
+Finale:False:False:False:True

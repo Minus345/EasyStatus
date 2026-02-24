@@ -297,20 +297,28 @@ def readFile():
         sys.exit(1)
     with (file):
         counter = 0
-        global wettkampf_dictionaries
-        for line in file:
-            counter += 1
-            split = line.split(":")
-            print(split)
-            try:
-                if split[1] == "True\n":
-                    offiziell = True
-                else:
-                    offiziell = False
-                wettkampf_dictionaries[split[0]] = Wettkampf(split[0], offiziell, False)  # TODO bool()
+        with dict_lock:
+            global wettkampf_dictionaries
+            for line in file:
+                counter += 1
+                line = line.rstrip("\n")
+                split = line.split(":")
+                print(split)
+                try:
+                    wettkampf_dictionaries[split[0]] = Wettkampf(split[0], readBool(split[1]), False)
+                    wettkampf_dictionaries[split[0]].protokoll = readBool(split[2])
+                    wettkampf_dictionaries[split[0]].ausgehangen = readBool(split[3])
+                    wettkampf_dictionaries[split[0]].urkunden = readBool(split[4])
 
-            except IndexError:
-                print("File Reading Error in line:[ " + str(counter) + " ] " + line)
+                except IndexError:
+                    print("File Reading Error in line:[ " + str(counter) + " ] " + line)
+
+
+def readBool(string: str) -> bool:
+    if string == "True":
+        return True
+    else:
+        return False
 
 
 def saveFile():
@@ -321,9 +329,12 @@ def saveFile():
         print("File not found")
         sys.exit(1)
     with file:
-        for x in wettkampf_dictionaries:
-            wk = wettkampf_dictionaries[x]
-            print(wk.name + ":" + str(wk.official), file=file)
+        with dict_lock:
+            for x in wettkampf_dictionaries:
+                wk = wettkampf_dictionaries[x]
+                print(
+                    wk.name + ":" + str(wk.official) + ":" + str(wk.protokoll) + ":" + str(wk.ausgehangen) + ":" + str(
+                        wk.urkunden), file=file)
 
 
 if __name__ == "__main__":
@@ -339,6 +350,7 @@ if __name__ == "__main__":
     notificationHandler = threading.Thread(target=notificationWorkerRun, daemon=True)
     notificationHandler.start()
 
+    # TODO: add periodic save thread
     try:
         checkingSocket()
     except KeyboardInterrupt:
