@@ -112,6 +112,7 @@ def createWindow():
         label = Label(eintrag_frame, text=wk, width=10, anchor="w")
         label.pack(side=LEFT)
 
+        # TODO: load form file wrong startup display
         if wk == "inoffiziell":
             state = IntVar(value=1)
         elif wk == "offiziell":
