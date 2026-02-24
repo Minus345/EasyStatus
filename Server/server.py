@@ -9,10 +9,12 @@ from desktop_notifier import DesktopNotifier, DesktopNotifierSync
 
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
+FILE_PATH = "wk.txt"
 
 
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C!')
+    saveFile()
     sys.exit(0)
 
 
@@ -59,21 +61,50 @@ global userInputThread
 
 def checkingSocket():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as serverSocket:
+        # wenn fehler einfach crashen lassen
         serverSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         serverSocket.bind((HOST, PORT))
         serverSocket.listen()
+        serverSocket.settimeout(1.0)
 
         while True:
-            conn, addr = serverSocket.accept()
+            try:
+                conn, addr = serverSocket.accept()
+            except socket.timeout:
+                continue
+            except socket.error as e:
+                print("socket error accept: " + str(e))
+                continue
             print(f"Connected by {addr}")
             with conn:
+                conn.settimeout(1.0)
+                # connection inti -> send all known data
+                sendString = ""
+                for x in wettkampf_dictionaries:
+                    thisWk = wettkampf_dictionaries[x]
+                    sendString += thisWk.name + ":" + str(thisWk.official) + "\n"
+                sendString += "ende\n"
+
+                try:
+                    conn.sendall(sendString.encode())
+                except socket.error as e:
+                    print("socket error send: " + str(e))
+                    continue
+
+                # main rec loop
                 while True:
-                    data = conn.recv(1024)
-                    # print(data)
-                    manageInput(data)
+                    try:
+                        data = conn.recv(1024)
+                    except socket.timeout:
+                        continue
+                    except socket.error as e:
+                        print("socket error accept: " + str(e))
+                        break
+
                     if not data:
                         print(f"client {addr} disconnected")
                         break
+                    manageInput(data)
 
 
 def manageInput(data):
@@ -88,21 +119,26 @@ def manageInput(data):
                 continue
             if x == "HI":
                 print("HI")
-                wettkampf_dictionaries.clear()
                 continue
-            splitString = x.split("|")
+            splitString = x.split(":")
             if len(splitString) == 2:
                 if splitString[0] not in wettkampf_dictionaries:
-                    if splitString[1] == "offiziell":
+                    if splitString[1] == "True":
                         newWettkampf = Wettkampf(splitString[0], True, False)
-                    else:
+                    elif splitString[1] == "False":
                         newWettkampf = Wettkampf(splitString[0], False, False)
+                    else:
+                        print("wrong message from client: <" + decodeString + ">")
+                        continue
                     wettkampf_dictionaries[splitString[0]] = newWettkampf  # in dict hinzufügen
                 else:
-                    if splitString[1] == "offiziell":
+                    if splitString[1] == "True":
                         wettkampf_dictionaries[splitString[0]].official = True
-                    else:
+                    elif splitString[1] == "False":
                         wettkampf_dictionaries[splitString[0]].official = False
+                    else:
+                        print("wrong message from client: <" + decodeString + ">")
+                        continue
 
                 wettkampf_dictionaries[splitString[0]].updateTime()
                 notificationQueue.put(wettkampf_dictionaries[splitString[0]])
@@ -167,19 +203,12 @@ def notificationWorkerRun():
         notifier.send(title="Neuen WK:", message=message)
 
 
-def createNotificationThread():
-    global notificationHandler
-    notificationHandler = threading.Thread(target=notificationWorkerRun, daemon=True)
-    notificationHandler.start()
-
-
 def wrongInput():
     print("wrong format: add/rem <name> p/u/a")
 
 
 def userInputThreadRun():
     while True:
-        print("running")
         try:
             line = input()
         except:
@@ -259,19 +288,60 @@ def setWk(selectedWk: str, u: int, p: int, a: int) -> bool:
     return False
 
 
-def createUserInputThread():
-    global userInputThread
-    userInputThread = threading.Thread(target=userInputThreadRun, daemon=True)
-    userInputThread.start()
+def readFile():
+    # TODO: check file suffix
+    try:
+        file = open(FILE_PATH, "r")
+    except FileNotFoundError:
+        print("File not found")
+        sys.exit(1)
+    with (file):
+        counter = 0
+        global wettkampf_dictionaries
+        for line in file:
+            counter += 1
+            split = line.split(":")
+            print(split)
+            try:
+                if split[1] == "True\n":
+                    offiziell = True
+                else:
+                    offiziell = False
+                wettkampf_dictionaries[split[0]] = Wettkampf(split[0], offiziell, False)  # TODO bool()
+
+            except IndexError:
+                print("File Reading Error in line:[ " + str(counter) + " ] " + line)
+
+
+def saveFile():
+    print("saving file")
+    try:
+        file = open(FILE_PATH, "w")
+    except FileNotFoundError:
+        print("File not found")
+        sys.exit(1)
+    with file:
+        for x in wettkampf_dictionaries:
+            wk = wettkampf_dictionaries[x]
+            print(wk.name + ":" + str(wk.official), file=file)
 
 
 if __name__ == "__main__":
     print("starting Server...")
     signal.signal(signal.SIGINT, signal_handler)
     print(HOST + ":" + str(PORT))
-    createNotificationThread()
-    createUserInputThread()
+    readFile()
+    printAll()
+
+    userInputThread = threading.Thread(target=userInputThreadRun, daemon=True)
+    userInputThread.start()
+
+    notificationHandler = threading.Thread(target=notificationWorkerRun, daemon=True)
+    notificationHandler.start()
+
     try:
         checkingSocket()
     except KeyboardInterrupt:
+        print("keyboard interrupt")
+        saveFile()
         sys.exit(0)

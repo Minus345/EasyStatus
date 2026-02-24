@@ -1,80 +1,95 @@
-from tkinter import *
 import socket
 import sys
-from tkinter import messagebox
 import Startup
+from tkinter import *
+from tkinter import messagebox
 
 PORT = 65432  # The port used by the server
 
-wettkampf_dictionaries = dict()
+wettkampf_dictionaries = dict[str, bool]()
 
 global root
 global clientSocket
 
 
 def status_geaendert(wkNumber, var):
-    print(f"{wkNumber} wurde geändert zu: {'inoffiziell' if var.get() else 'offiziell'}")
-
     if var.get() == 1:
-        wettkampf_dictionaries[wkNumber] = "inoffiziell"
+        wettkampf_dictionaries[wkNumber] = True  # offiziell
     else:
-        wettkampf_dictionaries[wkNumber] = "offiziell"
+        wettkampf_dictionaries[wkNumber] = False  # inoffiziell
     try:
-        clientSocket.sendall(wkNumber.encode() + b"|" + wettkampf_dictionaries[wkNumber].encode() + b"\n")
+        clientSocket.sendall((wkNumber + ":" + str(wettkampf_dictionaries[wkNumber]) + "\n").encode())
     except socket.error as e:
-        saveFile()
+        print(e)
 
         # Try to Reconnect to Server
         errorString = "Error during data exchange: " + str(e) + " Trying reconnect:"
-        while (True):
-            doReconnect = messagebox.askyesno("Error", errorString )
+        while True:
+            doReconnect = messagebox.askyesno("Error", errorString)
             if doReconnect:
                 errorSock = openSocket(ipaddress, port)
                 if errorSock is None:
+                    root.destroy()
+                    createWindow()
                     break
-                errorString = "Error during connection to Server: " + ipaddress + " : " + str(port) + " -> " + errorSock + " Trying reconnect: "
+                errorString = "Error during connection to Server: " + ipaddress + " : " + str(
+                    port) + " -> " + errorSock + " Trying reconnect: "
             else:
                 root.destroy()
                 sys.exit(1)
-
-    saveFile()
 
 
 def openSocket(host: str, port: int):
     global clientSocket
     try:
         clientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            clientSocket.connect((host, port))
-            try:
-                clientSocket.sendall(b"HI\n")
-                ## send all known data
-                for wk in wettkampf_dictionaries:
-                    clientSocket.sendall(wk.encode() + b"|" + wettkampf_dictionaries[wk].encode() + b"\n")
-                return None
-            except socket.error as e:
-                return f"Error during data exchange: {e}"
-        except socket.timeout:
-            return "Connection attempt timed out"
-        except ConnectionRefusedError:
-            return "Connection refused. Make sure the server is running."
-        except socket.error as e:
-            return f"Connection error: {e}"
+        clientSocket.connect((host, port))
+    except socket.timeout:
+        return "Connection attempt timed out"
+    except ConnectionRefusedError:
+        return "Connection refused. Make sure the server is running."
     except socket.error as e:
-        return f"Socket creation error: {e}"
+        return f"Connection error: {e}"
     except KeyboardInterrupt:
         return f"\nClient shutting down..."
 
+    clientSocket.settimeout(1.0)
 
-def saveAndExit():
-    clientSocket.close()
-    root.destroy()
-    sys.exit(1)
+    # send start
+    try:
+        clientSocket.sendall(b"HI\n")
+    except socket.error as e:
+        return f"Error during data exchange (send): {e}"
+
+    # get all known data
+    data = ""
+    while True:
+        try:
+            revBytes = clientSocket.recv(1024)
+        except socket.error as e:
+            return f"Error during data exchange (recv): {e}"
+        data += revBytes.decode()
+        if data.find("ende\n") != -1:
+            break
+
+    splitLine = data.split("\n")
+    for line in splitLine:
+        if line == "ende":
+            break
+        splitName = line.split(":")
+        if splitName[1] == "True":
+            wettkampf_dictionaries[splitName[0]] = True
+        elif splitName[1] == "False":
+            wettkampf_dictionaries[splitName[0]] = False
+        else:
+            return "wrong message rev: " + line
+    return None
 
 
 def onClose():
     if messagebox.askokcancel("Beenden", "Möchtest du das Fenster wirklich schließen?"):
-        saveAndExit()
+        clientSocket.close()
+        sys.exit(1)
 
 
 def createWindow():
@@ -112,20 +127,17 @@ def createWindow():
         label = Label(eintrag_frame, text=wk, width=10, anchor="w")
         label.pack(side=LEFT)
 
-        # TODO: load form file wrong startup display
-        if wk == "inoffiziell":
-            state = IntVar(value=1)
-        elif wk == "offiziell":
-            state = IntVar(value=0)
+        if wettkampf_dictionaries[wk]:
+            state = IntVar(value=1)  # offiziell
         else:
-            state = IntVar(value=-1)  # Startwert -1 bedeutet "nicht ausgewählt"
+            state = IntVar(value=0)  # inoffiziell
 
         cb1 = Radiobutton(
-            eintrag_frame, text="inoffiziell", fg="red", variable=state, value=1,
+            eintrag_frame, text="inoffiziell", fg="red", variable=state, value=0,
             command=lambda s=wk, v=state: status_geaendert(s, v)
         )
         cb2 = Radiobutton(
-            eintrag_frame, text="offiziell", fg="green", variable=state, value=0,
+            eintrag_frame, text="offiziell", fg="green", variable=state, value=1,
             command=lambda s=wk, v=state: status_geaendert(s, v)
         )
 
@@ -135,40 +147,10 @@ def createWindow():
     root.mainloop()
 
 
-def readFile():
-    # TODO: check file suffix
-    try:
-        file = open(filePath, "r")
-    except FileNotFoundError:
-        messagebox.showerror("Error", "File not found")
-        sys.exit(1)
-    with (file):
-        counter = 0
-        global wettkampf_dictionaries
-        for line in file:
-            counter += 1
-            try:
-                wettkampf_dictionaries[line.split(":")[0]] = line.split(":")[1]
-            except IndexError:
-                messagebox.showerror("Error", "File Reading Error in line:[ " + str(counter) + " ] " + line)
-
-
-def saveFile():
-    try:
-        file = open(filePath, "w")
-    except FileNotFoundError:
-        messagebox.showerror("Error", "File not found")
-        sys.exit(1)
-    with file:
-        for wk in wettkampf_dictionaries:
-            print(wk + ":" + wettkampf_dictionaries[wk], file=file, flush=True)
-
-
 if __name__ == "__main__":
-    port, ipaddress, filePath = Startup.startUp(PORT)
+    port, ipaddress = Startup.startUp(PORT)
     error = openSocket(ipaddress, port)
-    readFile()
     if error is not None:
         messagebox.showinfo(title="Error", message=error)
-        sys.exit(1)
+        sys.exit(0)
     createWindow()

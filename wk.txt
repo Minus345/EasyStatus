@@ -1,6 +1,4 @@
-1:inoffiziell
-2:offiziell
-3:offiziell
-
-Finale:inoffiziell
-
+1:False
+2:True
+3:True
+Finale:True
