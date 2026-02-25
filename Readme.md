@@ -1,5 +1,8 @@
 # Easy Status
 
+`Python Version 3.12`  
+because of Ubuntu LTS
+
 ## Server Startup Args
 `python3 server.py FILE_PATH HOST PORT`
 

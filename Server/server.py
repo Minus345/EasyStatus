@@ -361,7 +361,7 @@ if __name__ == "__main__":
         HOST = sys.argv[2]
         if len(sys.argv) > 3:
             PORT = int(sys.argv[3])
-    except IndexError, ValueError:
+    except (IndexError, ValueError):
         print("usage: < python3 server.py FILE_PATH HOST PORT > port is optional")
         sys.exit(1)
     print("path: " + FILE_PATH + " - " + HOST + ":" + str(PORT))
