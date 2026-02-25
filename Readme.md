@@ -23,3 +23,7 @@
 | Name  | Protokoll | Aushang | Urkunden |
 |-------|-----------|---------|----------|
 | `str` | `bool`    | `bool`  | `bool`   |
+
+## Build Client
+
+`pyinstaller -F --windowed .\Client\ClientMainGui.py`
