@@ -16,8 +16,7 @@ SLEEP_SAVE_MINUTES = 10
 
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C!')
-    saveFile()
-    sys.exit(0)
+    shutdownServer()
 
 
 class Wettkampf:
@@ -56,10 +55,10 @@ wettkampf_dictionaries = dict[str, Wettkampf]()
 dict_lock = threading.Lock()
 
 global notificationHandler
-notificationQueue = queue.Queue[Wettkampf]()
-
 global userInputThread
-global saveThread
+
+notificationQueue = queue.Queue[Wettkampf]()
+running = True
 
 
 def checkingSocket():
@@ -70,7 +69,7 @@ def checkingSocket():
         serverSocket.listen()
         serverSocket.settimeout(1.0)
 
-        while True:
+        while running:
             try:
                 conn, addr = serverSocket.accept()
             except socket.timeout:
@@ -95,7 +94,7 @@ def checkingSocket():
                     continue
 
                 # main rec loop
-                while True:
+                while running:
                     try:
                         data = conn.recv(1024)
                     except socket.timeout:
@@ -193,7 +192,7 @@ def printAll():
 
 def notificationWorkerRun():
     notifier = DesktopNotifierSync(app_name="EasyStatus")
-    while True:
+    while running:
         work = notificationQueue.get()
         if work.poison:
             break
@@ -211,7 +210,7 @@ def wrongInput():
 
 
 def userInputThreadRun():
-    while True:
+    while running:
         try:
             line = input()
         except:
@@ -349,9 +348,21 @@ def saveFile():
 
 
 def saveThreadRun():
-    while True:
+    while running:
         saveFile()
-        sleep(SLEEP_SAVE_MINUTES * 60)
+
+
+
+def shutdownServer():
+    print("Shutting down server...")
+    saveFile()
+    notificationQueue.put(Wettkampf(None, False, True))
+    global running
+    running = False
+    userInputThread.join()
+    notificationHandler.join()
+    saveThreadTimer.cancel()
+    sys.exit(0)
 
 
 if __name__ == "__main__":
@@ -371,18 +382,17 @@ if __name__ == "__main__":
     readFile()
     printAll()
 
-    userInputThread = threading.Thread(target=userInputThreadRun, daemon=True)
+    userInputThread = threading.Thread(target=userInputThreadRun)
     userInputThread.start()
 
-    notificationHandler = threading.Thread(target=notificationWorkerRun, daemon=True)
+    notificationHandler = threading.Thread(target=notificationWorkerRun)
     notificationHandler.start()
 
-    saveThread = threading.Thread(target=saveThreadRun, daemon=True)
-    saveThread.start()
+    saveThreadTimer = threading.Timer(SLEEP_SAVE_MINUTES * 60, saveThreadRun)
+    saveThreadTimer.start()
 
     try:
         checkingSocket()
     except KeyboardInterrupt:
         print("keyboard interrupt")
-        saveFile()
-        sys.exit(0)
+        shutdownServer()
