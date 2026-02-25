@@ -215,6 +215,14 @@ def userInputThreadRun():
             print("interupted")
             return
 
+        match line:
+            case "s":
+                saveFile()
+                continue
+            case "p":
+                printAll()
+                continue
+
         splitLine = line.split(" ")
 
         if len(splitLine) != 3:

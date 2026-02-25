@@ -8,6 +8,8 @@
 - `rem <name> p` protokoll noch nicht unterschrieben
 - `rem <name> u` urkunden
 - `rem <name> a` ausgehangen
+- `p` print wk overview
+- `s` save to File 
 
 ## Save File Format (*.txt)
 
