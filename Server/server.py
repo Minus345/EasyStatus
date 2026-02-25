@@ -9,7 +9,7 @@ from desktop_notifier import DesktopNotifier, DesktopNotifierSync
 
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
-FILE_PATH = "wk.txt"
+FILE_PATH = ""
 
 
 def signal_handler(sig, frame):
@@ -346,9 +346,19 @@ def saveFile():
 
 
 if __name__ == "__main__":
-    print("starting Server...")
+    print("reading startup arguments....")
+    try:
+        FILE_PATH = sys.argv[1]
+        HOST = sys.argv[2]
+        if len(sys.argv) > 3:
+            PORT = int(sys.argv[3])
+    except IndexError, ValueError:
+        print("usage: < python3 server.py FILE_PATH HOST PORT > port is optional")
+        sys.exit(1)
+    print("path: " + FILE_PATH + " - " + HOST + ":" + str(PORT))
+
+    print("starting server...")
     signal.signal(signal.SIGINT, signal_handler)
-    print(HOST + ":" + str(PORT))
     readFile()
     printAll()
 

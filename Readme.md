@@ -1,5 +1,12 @@
 # Easy Status
 
+## Server Startup Args
+`python3 server.py FILE_PATH HOST PORT`
+
+`FILE_PATH` String  
+`HOST` String  
+`PORT` int  
+
 ## Server Commands
 
 - `add <name> p` protokoll noch nicht unterschrieben
