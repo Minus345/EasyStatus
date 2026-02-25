@@ -4,12 +4,14 @@ import signal
 import threading
 import queue
 import time
+from time import sleep
 
 from desktop_notifier import DesktopNotifier, DesktopNotifierSync
 
 HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
 PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
 FILE_PATH = ""
+SLEEP_SAVE_MINUTES = 10
 
 
 def signal_handler(sig, frame):
@@ -57,6 +59,7 @@ global notificationHandler
 notificationQueue = queue.Queue[Wettkampf]()
 
 global userInputThread
+global saveThread
 
 
 def checkingSocket():
@@ -345,6 +348,12 @@ def saveFile():
                         wk.urkunden), file=file)
 
 
+def saveThreadRun():
+    while True:
+        saveFile()
+        sleep(SLEEP_SAVE_MINUTES * 60)
+
+
 if __name__ == "__main__":
     print("reading startup arguments....")
     try:
@@ -368,7 +377,9 @@ if __name__ == "__main__":
     notificationHandler = threading.Thread(target=notificationWorkerRun, daemon=True)
     notificationHandler.start()
 
-    # TODO: add periodic save thread
+    saveThread = threading.Thread(target=saveThreadRun, daemon=True)
+    saveThread.start()
+
     try:
         checkingSocket()
     except KeyboardInterrupt:
