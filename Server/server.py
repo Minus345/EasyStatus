@@ -4,7 +4,6 @@ import signal
 import threading
 import queue
 import time
-from time import sleep
 
 from desktop_notifier import DesktopNotifier, DesktopNotifierSync
 
@@ -16,7 +15,7 @@ SLEEP_SAVE_MINUTES = 10
 
 def signal_handler(sig, frame):
     print('You pressed Ctrl+C!')
-    shutdownServer()
+    print('Send EOF to exit Programm: Strg-D (Unix), Ctrl-Z+Return (Windows)')
 
 
 class Wettkampf:
@@ -56,6 +55,7 @@ dict_lock = threading.Lock()
 
 global notificationHandler
 global userInputThread
+global saveThreadTimer
 
 notificationQueue = queue.Queue[Wettkampf]()
 running = True
@@ -213,7 +213,13 @@ def userInputThreadRun():
     while running:
         try:
             line = input()
+            # wenn man das programm mit strg-c beenden will:
+            #   inputThread als Process implementieren mit Nachrichten über Pipe/Queue schicken
+        except EOFError:
+            shutdownServer()
+            return
         except:
+            # for windows exit
             print("interupted")
             return
 
@@ -348,8 +354,10 @@ def saveFile():
 
 
 def saveThreadRun():
-    while running:
-        saveFile()
+    saveFile()
+    global saveThreadTimer
+    saveThreadTimer = threading.Timer(SLEEP_SAVE_MINUTES * 60, saveThreadRun)
+    saveThreadTimer.start()
 
 
 
@@ -359,7 +367,6 @@ def shutdownServer():
     notificationQueue.put(Wettkampf(None, False, True))
     global running
     running = False
-    userInputThread.join()
     notificationHandler.join()
     saveThreadTimer.cancel()
     sys.exit(0)
@@ -388,11 +395,10 @@ if __name__ == "__main__":
     notificationHandler = threading.Thread(target=notificationWorkerRun)
     notificationHandler.start()
 
-    saveThreadTimer = threading.Timer(SLEEP_SAVE_MINUTES * 60, saveThreadRun)
-    saveThreadTimer.start()
+    saveThreadRun()
 
     try:
         checkingSocket()
     except KeyboardInterrupt:
         print("keyboard interrupt")
-        shutdownServer()
+        print('Send EOF to exit Programm: Strg-D (Unix), Ctrl-Z+Return (Windows)')

@@ -20,6 +20,7 @@ because of Ubuntu LTS
 - `rem <name> a` ausgehangen
 - `p` print wk overview
 - `s` save to File 
+-  `quit` programm
 
 ## Save File Format (*.txt)
 
