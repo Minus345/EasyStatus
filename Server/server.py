@@ -153,8 +153,7 @@ def manageInput(data):
 
 def printAll():
     with dict_lock:
-        wettkampf_dictionaries_sorted = {k: v for k, v in
-                                         sorted(wettkampf_dictionaries.items(), key=lambda item: item[0])}
+        wettkampf_dictionaries_sorted = dict(wettkampf_dictionaries)
     longestName = 0
     for x in wettkampf_dictionaries_sorted:
         if len(wettkampf_dictionaries_sorted[x].name) > longestName:
