@@ -30,6 +30,7 @@ def status_geaendert(wkNumber, var):
                 errorSock = openSocket(ipaddress, port)
                 if errorSock is None:
                     root.destroy()
+                    wettkampf_dictionaries.clear()
                     createWindow()
                     break
                 errorString = "Error during connection to Server: " + ipaddress + " : " + str(
