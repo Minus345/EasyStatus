@@ -18,10 +18,10 @@ because of Ubuntu LTS
 ## Server Commands
 
 - `add <name> p` protokoll noch nicht unterschrieben
-- `add <name> u` urkunden
+- `add <name> f` finale erstellt
 - `add <name> a` ausgehangen
 - `rem <name> p` protokoll noch nicht unterschrieben
-- `rem <name> u` urkunden
+- `rem <name> f` finale erstellt
 - `rem <name> a` ausgehangen
 - `p` print wk overview
 - `s` save to File 

@@ -24,7 +24,7 @@ class Wettkampf:
     lastEditedTime: time.struct_time
     poison = False
     protokoll = False
-    urkunden = False
+    finale = False
     ausgehangen = False
 
     def __init__(self, name, official, poison):
@@ -158,7 +158,7 @@ def printAll():
     for x in wettkampf_dictionaries_sorted:
         if len(wettkampf_dictionaries_sorted[x].name) > longestName:
             longestName = len(wettkampf_dictionaries_sorted[x].name)
-    print("+-" + longestName * "-" + "-+---------------+[Time]-+[P]+[A]+[U]+")
+    print("+-" + longestName * "-" + "-+---------------+[Time]-+[P]+[A]+[F]+")
 
     for x in wettkampf_dictionaries_sorted:
         wettkampf = wettkampf_dictionaries_sorted[x]
@@ -174,11 +174,11 @@ def printAll():
             a = "✔"
         else:
             a = "𐄂"
-        if wettkampf.urkunden:
-            u = "✔"
+        if wettkampf.finale:
+            f = "✔"
         else:
-            u = "𐄂"
-        wkParms = wettkampf.computeTime() + " | " + p + " | " + a + " | " + u + " |"
+            f = "𐄂"
+        wkParms = wettkampf.computeTime() + " | " + p + " | " + a + " | " + f + " |"
 
         if wettkampf.official:
             message = "| " + wettkampf.name + bufferSpaces + " | offiziell   ✔ | " + wkParms
@@ -250,7 +250,7 @@ def userInputThreadRun():
                 match splitLine[2]:
                     case "p":
                         p = 1
-                    case "u":
+                    case "f":
                         u = 1
                     case "a":
                         a = 1
@@ -261,7 +261,7 @@ def userInputThreadRun():
                 match splitLine[2]:
                     case "p":
                         p = -1
-                    case "u":
+                    case "f":
                         u = -1
                     case "a":
                         a = -1
@@ -291,9 +291,9 @@ def setWk(selectedWk: str, u: int, p: int, a: int) -> bool:
                         thisWk.protokoll = False
                 if u != 0:
                     if u == 1:
-                        thisWk.urkunden = True
+                        thisWk.finale = True
                     else:
-                        thisWk.urkunden = False
+                        thisWk.finale = False
                 if a != 0:
                     if a == 1:
                         thisWk.ausgehangen = True
@@ -323,7 +323,7 @@ def readFile():
                     wettkampf_dictionaries[split[0]] = Wettkampf(split[0], readBool(split[1]), False)
                     wettkampf_dictionaries[split[0]].protokoll = readBool(split[2])
                     wettkampf_dictionaries[split[0]].ausgehangen = readBool(split[3])
-                    wettkampf_dictionaries[split[0]].urkunden = readBool(split[4])
+                    wettkampf_dictionaries[split[0]].finale = readBool(split[4])
 
                 except IndexError:
                     print("File Reading Error in line:[ " + str(counter) + " ] " + line)
@@ -349,7 +349,7 @@ def saveFile():
                 wk = wettkampf_dictionaries[x]
                 print(
                     wk.name + ":" + str(wk.official) + ":" + str(wk.protokoll) + ":" + str(wk.ausgehangen) + ":" + str(
-                        wk.urkunden), file=file)
+                        wk.finale), file=file)
 
 
 def saveThreadRun():
