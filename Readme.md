@@ -3,6 +3,11 @@
 `Python Version 3.12`  
 because of Ubuntu LTS
 
+## Setup venv on Ubuntu
+`python -m venv /path/to/new/virtual/environment`  
+`source <venv>/bin/activate`  
+`pip install -r requirements.txt`  
+
 ## Server Startup Args
 `python3 server.py FILE_PATH HOST PORT`
 
